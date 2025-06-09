@@ -393,11 +393,8 @@
     };
     
     async function callGemini(prompt) {
-        const apiKey = ""; 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-        
-        let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-        const payload = { contents: chatHistory };
+        // 自分の中継サーバーのURLを呼び出す
+        const apiUrl = '/api/generate-scenario';
 
         try {
             const response = await fetch(apiUrl, {
