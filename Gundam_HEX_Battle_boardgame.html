@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>機動戦士ガンダム 一年戦争ボードゲーム 支援アプリ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .data-value, .card-title, .card-subtitle {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .tab-button {
+            transition: all 0.3s ease-in-out;
+        }
+        .tab-button.active {
+            background-color: #4a5568;
+            color: #ffffff;
+            border-bottom-color: #4299e1;
+        }
+        .filter-button {
+            transition: all 0.2s ease-in-out;
+        }
+        .filter-button.active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            will-change: transform;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .scenario-block {
+            position: relative;
+            overflow: hidden;
+            background-color: #000;
+        }
+        .scenario-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.4;
+            transition: transform 0.5s ease;
+        }
+        .scenario-block:hover .scenario-bg {
+            transform: scale(1.05);
+        }
+        .scenario-content {
+            position: relative;
+            z-index: 10;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+        }
+        .gemini-button {
+            background-color: #f59e0b;
+            color: white;
+        }
+        .gemini-button:hover {
+            background-color: #d97706;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <h1 class="text-xl md:text-2xl font-bold card-title">機動戦士ガンダム 一年戦争ボードゲーム「THE ONE YEAR WAR 0079-0080」</h1>
+        </div>
+    </header>
+
+    <nav class="bg-slate-700 text-white">
+        <div class="container mx-auto px-4">
+            <div class="flex" id="tabs">
+                <button class="tab-button flex-1 py-3 px-2 text-sm md:text-base font-bold border-b-4 border-transparent active" onclick="showTab('overview')">ゲーム概要</button>
+                <button class="tab-button flex-1 py-3 px-2 text-sm md:text-base font-bold border-b-4 border-transparent" onclick="showTab('scenarios')">シナリオ</button>
+                <button class="tab-button flex-1 py-3 px-2 text-sm md:text-base font-bold border-b-4 border-transparent" onclick="showTab('cards')">カードリスト</button>
+                <button class="tab-button flex-1 py-3 px-2 text-sm md:text-base font-bold border-b-4 border-transparent" onclick="showTab('gemini')">AIシナリオ生成 ✨</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 md:p-6">
+        <div id="overview-content" class="space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-bold border-b-2 border-slate-300 pb-2 mb-4">1. ゲーム概要</h2>
+                <p class="mb-4">本ゲームは、アニメ『機動戦士ガンダム』における「一年戦争」をテーマにした、2〜4人用の戦略級ボードゲームです。プレイヤーは地球連邦軍またはジオン公国軍の指揮官となり、与えられた目標の達成を目指します。</p>
+                <ul class="list-disc list-inside space-y-2 bg-slate-50 p-4 rounded-md">
+                    <li><strong>プレイ人数:</strong> 2〜4人（各陣営1〜2名）</li>
+                    <li><strong>ゲームマスター(GM):</strong> 1名（必須）</li>
+                    <li><strong>勝利条件:</strong> 各シナリオで指定された「目標カード」の条件を達成する。または、敵陣営の全ユニットを撃破する。</li>
+                </ul>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-bold border-b-2 border-slate-300 pb-2 mb-4">2. ルールブック</h2>
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-xl font-bold mb-2">2.1. ゲームの準備</h3>
+                        <ol class="list-decimal list-inside space-y-2">
+                             <li><strong>シナリオ選択:</strong> プレイするシナリオを1つ選びます。GMは対応するマップと目標カードを準備します。</li>
+                            <li><strong>陣営決定:</strong> 各陣営の代表プレイヤーが1d6ダイスを振り、出目が大きい方が「地球連邦軍」か「ジオン公国軍」かを選択します。もう一方が残りの陣営を担当します。</li>
+                            <li><strong>目標カード配布:</strong> GMは各陣営に、シナリオに対応した非公開の「目標カード」を渡します。</li>
+                            <li><strong>デッキビルド:</strong>
+                                <ul class="list-disc list-inside ml-4 mt-2 space-y-1">
+                                    <li><strong>戦艦カード:</strong> 各陣営、自軍の「戦艦カード」山札から3枚引きます。</li>
+                                    <li><strong>MS/MAカード:</strong> 各陣営、自軍の「MS/MAカード」山札から8枚引き、「モビルアーマーカード」山札から4枚引きます。</li>
+                                    <li><strong>コスト調整:</strong> 手札のMS/MAカードの<strong>合計コストが10</strong>になるように、不要なカードを裏向きで捨て札置き場に置きます。</li>
+                                    <li><strong>搭乗員カード:</strong> 自軍の「搭乗員カード」山札から5枚引きます。</li>
+                                    <li><strong>スキルカード:</strong> 自軍の「スキルカード」山札から4枚引きます。</li>
+                                    <li><strong>ユニット編成:</strong> MS/MAに搭乗員を配置し、さらにMS/MAを戦艦に搭載します。</li>
+                                </ul>
+                            </li>
+                            <li><strong>初期配置:</strong> マップで指定された自軍の初期配置エリアにユニットを配置します。</li>
+                            <li><strong>先攻決定:</strong> 各陣営の代表が1d6ダイスを振り、出目が大きい方が先攻となります。</li>
+                        </ol>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold mb-2">2.2. ゲームの流れ</h3>
+                        <p class="mb-2">ゲームは以下のフェーズを繰り返して進行します。基本的に両軍のアクションは宣言後に同時に解決されます。</p>
+                        <ol class="list-decimal list-inside space-y-2">
+                            <li><strong>戦略フェーズ:</strong> 両軍プレイヤーは、自軍ユニットの「移動」「スキルカードの使用」などのアクションを決定し、GMに非公開で伝えます。</li>
+                            <li><strong>実行フェーズ:</strong> GMの宣言により、移動、ミノフスキー粒子散布、スキル解決などを同時に行います。</li>
+                            <li><strong>戦闘フェーズ:</strong> 索敵判定後、捕捉した敵に攻撃。命中判定、ダメージ計算、反撃判定を行います。</li>
+                            <li><strong>ターン終了:</strong> 全ての戦闘が終了したらターン終了です。</li>
+                        </ol>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold mb-2">2.3. 特殊ルール</h3>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li><strong>ミノフスキー粒子:</strong> 濃度（無・低・高）により索敵や指揮に影響。濃度は3ターンで1段階ずつ低下します。</li>
+                            <li><strong>指揮範囲:</strong> 戦艦の指揮範囲内にいる味方ユニットは、命中判定と回避判定に+1のボーナスを得ます。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="scenarios-content" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-bold border-b-2 border-slate-300 pb-2 mb-4">3. シナリオ</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="scenario-block rounded-lg shadow-lg">
+                        <div class="scenario-bg" style="background-image: url('https://www.gundam.jp/tv/world/images/world_image_01.jpg');"></div>
+                        <div class="scenario-content p-4">
+                            <h3 class="text-xl font-bold mb-2">シナリオ1: サイド7強襲</h3>
+                            <p class="text-sm text-slate-300 mb-3">マップ: 宇宙とスペースコロニー「サイド7」内部</p>
+                            <div class="space-y-3">
+                                <div class="bg-blue-900 bg-opacity-50 p-3 rounded">
+                                    <h4 class="font-bold text-blue-300">地球連邦軍 目標</h4>
+                                    <p><strong>勝利条件:</strong> V作戦の積荷をホワイトベースに搭載し、指定ポイントから脱出させる。</p>
+                                    <p><strong>敗北条件:</strong> ホワイトベースの撃沈、またはV作戦ユニットの全滅。</p>
+                                </div>
+                                <div class="bg-green-900 bg-opacity-50 p-3 rounded">
+                                    <h4 class="font-bold text-green-300">ジオン公国軍 目標</h4>
+                                    <p><strong>勝利条件:</strong> V作戦ユニット3機を全て破壊する。</p>
+                                    <p><strong>敗北条件:</strong> ファルメル撃沈、またはシャア・アズナブルの戦死。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scenario-block rounded-lg shadow-lg">
+                        <div class="scenario-bg" style="background-image: url('https://www.gundam.jp/tv/world/images/world_image_02.jpg');"></div>
+                        <div class="scenario-content p-4">
+                            <h3 class="text-xl font-bold mb-2">シナリオ2: オデッサ作戦</h3>
+                            <p class="text-sm text-slate-300 mb-3">マップ: オデッサ鉱山基地周辺の地上</p>
+                            <div class="space-y-3">
+                                <div class="bg-blue-900 bg-opacity-50 p-3 rounded">
+                                    <h4 class="font-bold text-blue-300">地球連邦軍 目標</h4>
+                                    <p><strong>勝利条件:</strong> 10ターン以内にオデッサ司令部マスを占領する。</p>
+                                    <p><strong>敗北条件:</strong> 戦力50%以上損失、または核ミサイル発射阻止失敗。</p>
+                                </div>
+                                <div class="bg-green-900 bg-opacity-50 p-3 rounded">
+                                    <h4 class="font-bold text-green-300">ジオン公国軍 目標</h4>
+                                    <p><strong>勝利条件:</strong> 10ターン司令部を防衛、またはビッグ・トレー撃破。</p>
+                                    <p><strong>敗北条件:</strong> オデッサ司令部マスが占領される。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="scenario-block rounded-lg shadow-lg">
+                        <div class="scenario-bg" style="background-image: url('https://www.gundam.jp/tv/world/images/world_image_03.jpg');"></div>
+                        <div class="scenario-content p-4">
+                            <h3 class="text-xl font-bold mb-2">シナリオ3: ソロモン攻略戦</h3>
+                            <p class="text-sm text-slate-300 mb-3">マップ: 宇宙要塞「ソロモン」周辺宙域</p>
+                            <div class="space-y-3">
+                                <div class="bg-blue-900 bg-opacity-50 p-3 rounded">
+                                    <h4 class="font-bold text-blue-300">地球連邦軍 目標</h4>
+                                    <p><strong>勝利条件:</strong> ソーラ・システムで要塞に50ダメージ後、司令部を占領。</p>
+                                    <p><strong>敗北条件:</strong> ティアンム艦撃沈、またはソーラ・システム破壊。</p>
+                                </div>
+                                <div class="bg-green-900 bg-opacity-50 p-3 rounded">
+                                    <h4 class="font-bold text-green-300">ジオン公国軍 目標</h4>
+                                    <p><strong>勝利条件:</strong> ソーラ・システム阻止、または連邦旗艦3隻撃沈。</p>
+                                    <p><strong>敗北条件:</strong> ドズル・ザビ戦死、またはソロモン陥落。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scenario-block rounded-lg shadow-lg">
+                        <div class="scenario-bg" style="background-image: url('https://www.gundam.jp/tv/world/images/world_image_04.jpg');"></div>
+                        <div class="scenario-content p-4">
+                            <h3 class="text-xl font-bold mb-2">シナリオ4: ア・バオア・クー攻防戦</h3>
+                            <p class="text-sm text-slate-300 mb-3">マップ: 宇宙要塞「ア・バオア・クー」周辺宙域</p>
+                            <div class="space-y-3">
+                                <div class="bg-blue-900 bg-opacity-50 p-3 rounded">
+                                    <h4 class="font-bold text-blue-300">地球連邦軍 目標</h4>
+                                    <p><strong>勝利条件:</strong> ギレン/キシリア座乗艦撃沈後、司令部を占領。</p>
+                                    <p><strong>敗北条件:</strong> レビル艦撃沈、または戦力70%以上損失。</p>
+                                </div>
+                                <div class="bg-green-900 bg-opacity-50 p-3 rounded">
+                                    <h4 class="font-bold text-green-300">ジオン公国軍 目標</h4>
+                                    <p><strong>勝利条件:</strong> ソーラ・レイ発射成功後、10ターン防衛。</p>
+                                    <p><strong>敗北条件:</strong> ギレン/キシリア戦死、またはア・バオア・クー陥落。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="cards-content" class="hidden">
+             <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+                <h2 class="text-2xl font-bold border-b-2 border-slate-300 pb-2 mb-4">4. カードリスト</h2>
+                <div id="card-filters" class="flex flex-wrap gap-2 md:gap-4 justify-center">
+                    <button class="filter-button bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-full shadow-md active" onclick="filterCards('all')">全表示</button>
+                    <button class="filter-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-md" onclick="filterCards('federation')">地球連邦軍</button>
+                    <button class="filter-button bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full shadow-md" onclick="filterCards('zeon')">ジオン公国軍</button>
+                    <button class="filter-button bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-full shadow-md" onclick="filterCards('pilot')">搭乗員</button>
+                    <button class="filter-button bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-full shadow-md" onclick="filterCards('skill')">スキル</button>
+                </div>
+            </div>
+            <div id="card-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+            </div>
+        </div>
+
+        <div id="gemini-content" class="hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-bold border-b-2 border-slate-300 pb-2 mb-4">AIシナリオ生成 ✨</h2>
+                <p class="mb-4 text-slate-600">あなただけのオリジナルシナリオをAIに作成してもらいましょう。希望するシチュエーションや登場させたいユニットなどを自由に入力してください。</p>
+                <div class="space-y-4">
+                    <textarea id="scenario-prompt" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500" rows="4" placeholder="例：アムロのガンダムとシャアのゲルググが、月面都市グラナダで最終決戦を繰り広げるシナリオ"></textarea>
+                    <button id="generate-scenario-btn" class="gemini-button font-bold py-2 px-4 rounded-md shadow-md w-full" onclick="generateScenario()">シナリオを生成する</button>
+                </div>
+                <div id="scenario-result-container" class="mt-6">
+                    <div id="scenario-loader" class="hidden flex justify-center items-center">
+                        <div class="loader"></div>
+                    </div>
+                    <div id="scenario-result" class="p-4 border border-slate-200 rounded-lg bg-slate-50 whitespace-pre-wrap"></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="tactics-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-xl font-bold">AI戦術分析 ✨</h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-800">&times;</button>
+            </div>
+            <div class="p-6">
+                <div id="modal-loader" class="flex justify-center items-center">
+                    <div class="loader"></div>
+                </div>
+                <div id="modal-content" class="text-slate-700 leading-relaxed"></div>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+    const placeholderImg = 'https://placehold.co/80x80/e2e8f0/4a5568?text=NO+IMG';
+    const cardData = {
+        federation: [
+            { name: "RX-78-2 ガンダム", hp: 55, en: 40, move: 6, cost: 3, search: 7, ability: "[学習するコンピュータ] 回避判定+2。\n武装1: ビーム・ライフル(命中12/ダメ20)\n武装2: ビーム・サーベル(命中10/ダメ15)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gundam.png' },
+            { name: "RX-77-2 ガンキャノン", hp: 45, en: 35, move: 4, cost: 2, search: 6, ability: "[支援砲撃] 射程+3。移動後攻撃不可。\n武装1: 240mmキャノン(命中13/ダメ18)\n武装2: ビーム・ライフル(命中14/ダメ16)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_guncannon.png' },
+            { name: "RX-75 ガンタンク", hp: 50, en: 30, move: 3, cost: 2, search: 5, ability: "[無限軌道] 地形効果による移動コストを無視。\n武装1: 120mm低反動キャノン砲(命中14/ダメ15, 2回攻撃)\n武装2: 腕部ボップミサイル(命中15/ダメ10)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_guntank.png' },
+            { name: "RGM-79 ジム", hp: 30, en: 25, move: 5, cost: 1, search: 4, ability: "[量産機]\n武装1: ビーム・スプレーガン(命中14/ダメ12)\n武装2: ビーム・サーベル(命中11/ダメ10)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gm.png' },
+            { name: "RB-79 ボール", hp: 15, en: 15, move: 4, cost: 1, search: 3, ability: "[棺桶] 回避判定-2。\n武装1: 180mm低反動砲(命中15/ダメ12)\n武装2: 複腕マニピュレーター(命中-/ダメ-)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_ball.png' },
+            { name: "RGM-79[G] 陸戦型ジム", hp: 35, en: 25, move: 5, cost: 1, search: 4, ability: "[現地改修]\n武装1: 100mmマシンガン(命中14/ダメ10)\n武装2: ビーム・サーベル(命中12/ダメ10)", img: 'https://www.08ms-team.net/ms/images/02.png' },
+            { name: "RX-79[G] 陸戦型ガンダム", hp: 45, en: 35, move: 5, cost: 2, search: 6, ability: "[現地改修]\n武装1: 180mmキャノン(命中13/ダメ18)\n武装2: ビーム・サーベル(命中11/ダメ14)", img: 'https://www.08ms-team.net/ms/images/01.png' },
+            { name: "RGM-79SP ジム・スナイパーII", hp: 40, en: 30, move: 6, cost: 2, search: 8, ability: "[精密射撃] 攻撃時、目標の回避補正を-2。\n武装1: スナイパー・ライフル(命中10/ダメ22)\n武装2: ビーム・サーベル(命中12/ダメ12)", img: 'https://www.g-0080.net/ms/images/07.png' },
+            { name: "RX-78NT-1 アレックス", hp: 60, en: 45, move: 7, cost: 3, search: 8, ability: "[マグネットコーティング] 回避判定+3。\n武装1: 腕部90mmガトリングガン(命中15/ダメ8, 3回攻撃)\n武装2: ビーム・サーベル(命中10/ダメ16)", img: 'https://www.g-0080.net/ms/images/01.png' },
+            { name: "FA-78-1 フルアーマーガンダム", hp: 70, en: 40, move: 4, cost: 3, search: 6, ability: "[追加装甲] HPが35以下になるとパージ。移動力+2、回避+1。\n武装1: 2連装ビーム・ライフル(命中13/ダメ24)\n武装2: 肩部ロケット砲(命中14/ダメ18)", img: 'https://i.imgur.com/w2cO3bH.png' },
+            { name: "コア・ブースター", hp: 25, en: 30, move: 8, cost: 1, search: 5, ability: "[戦闘機]\n武装1: メガ粒子砲(命中14/ダメ14)\n武装2: ミサイル・ランチャー(命中15/ダメ10)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_corebooster.png' },
+            { name: "Gファイター", hp: 30, en: 30, move: 7, cost: 1, search: 5, ability: "[Gアーマー] ガンダムと合体可能。\n武装1: ビームキャノン(命中14/ダメ15)\n武装2: ミサイル(命中15/ダメ10)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gfighter.png' },
+            { name: "ジム・キャノン", hp: 38, en: 28, move: 4, cost: 1, search: 5, ability: "[支援機]\n武装1: 240mmロケット砲(命中14/ダメ16)\n武装2: ビーム・スプレーガン(命中15/ダメ12)", img: 'https://i.imgur.com/9Vj9vT7.png' },
+            { name: "ジム・コマンド（宇宙仕様）", hp: 35, en: 28, move: 6, cost: 1, search: 5, ability: "[高性能量産機]\n武装1: ビーム・ガン(命中13/ダメ14)\n武装2: ビーム・サーベル(命中11/ダメ11)", img: 'https://www.g-0080.net/ms/images/04.png' },
+            { name: "ジム寒冷地仕様", hp: 32, en: 25, move: 5, cost: 1, search: 4, ability: "[寒冷地仕様] 雪原マップで移動コスト-1。\n武装1: 90mmマシンガン(命中14/ダメ10)\n武装2: グレネード・ランチャー(命中15/ダメ8)", img: 'https://www.g-0080.net/ms/images/08.png' },
+            { name: "ガンダムEz8", hp: 50, en: 40, move: 5, cost: 3, search: 6, ability: "[俺は生きる！] HPが0になった時、1d6で5以上ならHP1で耐える。\n武装1: 100mmマシンガン(命中13/ダメ12)\n武装2: ビーム・サーベル(命中10/ダメ15)", img: 'https://www.08ms-team.net/ms/images/03.png' }
+        ],
+        zeon: [
+            { name: "MS-06F ザクII", hp: 28, en: 25, move: 5, cost: 1, search: 4, ability: "[汎用主力機]\n武装1: 120mmマシンガン(命中13/ダメ10)\n武装2: ヒート・ホーク(命中11/ダメ12)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_zaku.png' },
+            { name: "MS-06S シャア専用ザクII", hp: 35, en: 30, move: 7, cost: 2, search: 6, ability: "[通常の3倍] 移動フェイズで2回移動可能(2回目は攻撃不可)。\n武装1: 120mmマシンガン(命中12/ダメ12)\n武装2: ヒート・ホーク(命中10/ダメ13)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_charzaku.png' },
+            { name: "MS-07B グフ", hp: 40, en: 30, move: 5, cost: 2, search: 5, ability: "[ザクとは違うのだよ] 白兵戦時、命中判定+1。\n武装1: ヒート・ロッド(命中12/ダメ10, 攻撃後敵は1ターン行動不可)\n武装2: 75mmフィンガーバルカン(命中16/ダメ5, 5回攻撃)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gouf.png' },
+            { name: "MS-09 ドム", hp: 40, en: 30, move: 6, cost: 2, search: 5, ability: "[ホバー走行] 地上での移動コスト-1。\n武装1: ジャイアント・バズ(命中14/ダメ18)\n武装2: ヒート・サーベル(命中11/ダメ14)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_dom.png' },
+            { name: "MS-14A ゲルググ", hp: 45, en: 35, move: 6, cost: 2, search: 6, ability: "[先行量産型]\n武装1: ビーム・ライフル(命中13/ダメ18)\n武装2: ビーム・ナギナタ(命中10/ダメ16)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gelgoog.png' },
+            { name: "MSM-07S ズゴック（シャア専用）", hp: 42, en: 35, move: 5, cost: 2, search: 6, ability: "[水中戦のエース] 水中マップで移動力+2、回避+1。\n武装1: メガ粒子砲(命中13/ダメ15, 2回攻撃)\n武装2: アイアン・ネイル(命中10/ダメ16)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_charzgok.png' },
+            { name: "MSN-02 ジオング", hp: 65, en: 50, move: 7, cost: 3, search: 8, ability: "[オールレンジ攻撃] 2つの異なる対象に同時攻撃可能。\n武装1: 有線サイコミュ式メガ粒子砲(命中11/ダメ18, 2回攻撃)\n武装2: 頭部メガ粒子砲(命中12/ダメ20)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_zeong.png' },
+            { name: "MA-08 ビグ・ザム", hp: 100, en: 70, move: 4, cost: 3, search: 7, ability: "[Iフィールド] ビーム兵器のダメージ半減。\n武装1: 大型メガ粒子砲(命中10/ダメ40, 直線3マス範囲)\n武装2: 周囲対空メガ粒子砲(命中14/ダメ12, 隣接全敵対象)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_bigzam.png' },
+            { name: "MS-18E ケンプファー", hp: 45, en: 35, move: 8, cost: 3, search: 6, ability: "[強襲用] 1ターンに2つの異なる射撃武器を使用可能。\n武装1: 専用ショットガン(命中13/ダメ15)\n武装2: ジャイアント・バズ(命中14/ダメ18)", img: 'https://www.g-0080.net/ms/images/05.png' },
+            { name: "MS-06FZ ザクII改", hp: 32, en: 28, move: 6, cost: 1, search: 5, ability: "[統合整備計画]\n武装1: MMP-80マシンガン(命中13/ダメ11)\n武装2: ヒート・ホーク(命中11/ダメ12)", img: 'https://www.g-0080.net/ms/images/02.png' },
+            { name: "MS-09R リック・ドム", hp: 42, en: 32, move: 7, cost: 2, search: 5, ability: "[宇宙用ドム]\n武装1: ビーム・バズーカ(命中14/ダメ20)\n武装2: ヒート・サーベル(命中12/ダメ14)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_rickdom.png' },
+            { name: "YMS-15 ギャン", hp: 44, en: 30, move: 6, cost: 2, search: 5, ability: "[騎士道] 格闘攻撃を仕掛けられた時、必ず反撃できる。\n武装1: ビーム・サーベル(命中9/ダメ18)\n武装2: ニードル・ミサイル(命中15/ダメ8)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gyan.png' },
+            { name: "MSM-03 ゴッグ", hp: 50, en: 25, move: 4, cost: 2, search: 4, ability: "[重装甲] 実弾兵器のダメージ-5。\n武装1: メガ粒子砲(命中15/ダメ14, 2回攻撃)\n武装2: アイアン・ネイル(命中12/ダメ14)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_gogg.png' },
+            { name: "MSM-04 アッガイ", hp: 30, en: 20, move: 5, cost: 1, search: 6, ability: "[隠密性] 索敵判定時、相手に-2のペナルティ。\n武装1: 腕部メガ粒子砲(命中15/ダメ12)\n武装2: 6連装ミサイルランチャー(命中16/ダメ8)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_acguy.png' },
+            { name: "MS-05B ザクI", hp: 25, en: 20, move: 5, cost: 1, search: 3, ability: "[旧式]\n武装1: 105mmマシンガン(命中15/ダメ8)\n武装2: ヒート・ホーク(命中12/ダメ10)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_oldzaku.png' },
+            { name: "MS-07B-3 グフ・カスタム", hp: 48, en: 35, move: 5, cost: 3, search: 6, ability: "[エースカスタム]\n武装1: ガトリング・シールド(命中14/ダメ7, 5回攻撃)\n武装2: ヒート・ワイヤー(命中12/ダメ10, 攻撃後敵は1ターン行動不可)", img: 'https://www.08ms-team.net/ms/images/04.png' },
+            { name: "MAN-08 エルメス", hp: 55, en: 60, move: 7, cost: 3, search: 9, ability: "[ビット] 3つの異なる対象に同時攻撃可能。射程+4。\n武装1: ビット(命中12/ダメ12, 3回攻撃)\n武装2: メガ粒子砲(命中13/ダメ16, 2回攻撃)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_elmeth.png' },
+            { name: "MAX-03 アッザム", hp: 60, en: 40, move: 3, cost: 2, search: 5, ability: "[リーダー] 4つの電磁ワイヤーで囲んだマスにいるユニットに毎ターンダメージ10。\n武装1: メガ粒子砲(命中16/ダメ10, 8門)\n武装2: アッザム・リーダー(命中-/ダメ10)", img: 'https://www.gundam.jp/tv/world/mechanic/images/me_adzam.png' },
+            { name: "APSARUS II アプサラスII", hp: 75, en: 50, move: 4, cost: 3, search: 7, ability: "[ミノフスキークラフト] 地形効果を無視して移動。\n武装1: 大型メガ粒子砲(命中12/ダメ35)\n武装2: ザクヘッド・バルカン(-/-)", img: 'https://www.08ms-team.net/ms/images/05.png' }
+        ],
+        pilot: [
+            { name: "アムロ・レイ", side: "連邦", shooting: "+4", melee: "+3", reaction: "+5", command: "+1", skill: "(P)[ニュータイプ] 回避と命中判定+2。敵NTの位置を知る。", img: 'https://www.gundam.jp/tv/world/character/images/ch_amuro.png' },
+            { name: "ブライト・ノア", side: "連邦", shooting: "+1", melee: "+1", reaction: "+2", command: "+5", skill: "(C)[弾幕薄いぞ！] 自艦の対空機銃の命中判定+3。", img: 'https://www.gundam.jp/tv/world/character/images/ch_bright.png' },
+            { name: "カイ・シデン", side: "連邦", shooting: "+3", melee: "+1", reaction: "+2", command: "+1", skill: "(P)[皮肉屋] 敵のスキル効果の対象になった時、1d6で4以上なら無効化。", img: 'https://www.gundam.jp/tv/world/character/images/ch_kai.png' },
+            { name: "ハヤト・コバヤシ", side: "連邦", shooting: "+2", melee: "+2", reaction: "+2", command: "+1", skill: "(P)[柔道有段者] 格闘攻撃を仕掛けられた時、回避判定+2。", img: 'https://www.gundam.jp/tv/world/character/images/ch_hayato.png' },
+            { name: "セイラ・マス", side: "連邦", shooting: "+2", melee: "+2", reaction: "+3", command: "+2", skill: "(P)[アルテイシア] ジオンの特定キャラと対峙した時、特殊イベントが発生。", img: 'https://www.gundam.jp/tv/world/character/images/ch_sayla.png' },
+            { name: "スレッガー・ロウ", side: "連邦", shooting: "+3", melee: "+3", reaction: "+3", command: "+2", skill: "(P)[悲しいけどこれ、戦争なのよね] 自機が破壊される時、隣接する敵1機に15ダメージ。", img: 'https://www.gundam.jp/tv/world/character/images/ch_sleggar.png' },
+            { name: "マチルダ・アジャン", side: "連邦", shooting: "+1", melee: "+1", reaction: "+2", command: "+3", skill: "(C)[補給部隊] 搭乗艦に隣接する味方MS1機のENをターン開始時に10回復。", img: 'https://www.gundam.jp/tv/world/character/images/ch_matilda.png' },
+            { name: "レビル将軍", side: "連邦", shooting: "+0", melee: "+0", reaction: "+1", command: "+6", skill: "(C)[ジオンに兵なし] 1ゲームに1度、自軍全てのユニットのHPを10回復。", img: 'https://www.gundam.jp/tv/world/character/images/ch_revil.png' },
+            { name: "クリスチーナ・マッケンジー", side: "連邦", shooting: "+3", melee: "+2", reaction: "+4", command: "+1", skill: "(P)[テストパイロット] 搭乗機のHPが50%以下になった時、1度だけENを20回復する。", img: 'https://www.g-0080.net/character/images/02.png' },
+            { name: "シロー・アマダ", side: "連邦", shooting: "+2", melee: "+4", reaction: "+3", command: "+2", skill: "(P)[倍返しだ！] 攻撃を受けた次の自分のターン、同じ相手への格闘攻撃ダメージ+10。", img: 'https://www.08ms-team.net/character/images/01.png' },
+            { name: "カレン・ジョシュワ", side: "連邦", shooting: "+3", melee: "+2", reaction: "+2", command: "+1", skill: "(P)[ベテラン軍曹] 搭乗機のHPが50%以下でも能力が低下しない。", img: 'https://www.08ms-team.net/character/images/04.png' },
+            { name: "テリー・サンダースJr.", side: "連邦", shooting: "+2", melee: "+2", reaction: "+3", command: "+1", skill: "(P)[死神] 3ターンに1度、攻撃を完全回避できる。", img: 'https://www.08ms-team.net/character/images/05.png' },
+            { name: "ユウ・カジマ", side: "連邦", shooting: "+3", melee: "+3", reaction: "+4", command: "+2", skill: "(P)[蒼い死神] EXAMシステム搭載機に搭乗時、全能力+1。暴走の危険あり。", img: 'https://i.imgur.com/9B6q2Yx.png' },
+            { name: "コウ・ウラキ", side: "連邦", shooting: "+3", melee: "+3", reaction: "+3", command: "+1", skill: "(P)[幻の撃墜王] テスト機に搭乗時、性能を最大限に引き出す（移動+1、命中+1）。", img: 'https://i.imgur.com/O6r4c5F.png' },
+            { name: "チャック・キース", side: "連邦", shooting: "+2", melee: "+1", reaction: "+2", command: "+1", skill: "(P)[援護] 味方に隣接している時、その味方が受けるダメージを5肩代わりできる。", img: 'https://i.imgur.com/7eA5o8B.png' },
+            { name: "アナベル・ガトー", side: "ジオン", shooting: "+4", melee: "+4", reaction: "+4", command: "+4", skill: "(P)[ソロモンの悪夢] 宇宙マップでの戦闘時、命中と回避判定+1。", img: 'https://i.imgur.com/tL4E2N7.png' },
+            { name: "シャア・アズナブル", side: "ジオン", shooting: "+4", melee: "+4", reaction: "+5", command: "+4", skill: "(P)[赤い彗星] 搭乗機の移動力+1。毎ターン最初の攻撃の命中判定+2。", img: 'https://www.gundam.jp/tv/world/character/images/ch_char.png' },
+            { name: "ランバ・ラル", side: "ジオン", shooting: "+2", melee: "+5", reaction: "+3", command: "+3", skill: "(P)[ゲリラ戦術] 森林・市街地マスでの戦闘時、格闘攻撃のダメージ+5。", img: 'https://www.gundam.jp/tv/world/character/images/ch_rambaral.png' },
+            { name: "ガイア", side: "ジオン", shooting: "+2", melee: "+3", reaction: "+3", command: "+2", skill: "(P)[ジェットストリームアタック] ドム搭乗時、マッシュ、オルテガと連携可能。", img: 'https://www.gundam.jp/tv/world/character/images/ch_gaia.png' },
+            { name: "マ・クベ", side: "ジオン", shooting: "+1", melee: "+1", reaction: "+1", command: "+3", skill: "(C)[あの壺をキシリア様に] 毎ターン、自軍の資金+1。ギャン搭乗時、格闘+2。", img: 'https://www.gundam.jp/tv/world/character/images/ch_mquve.png' },
+            { name: "ドズル・ザビ", side: "ジオン", shooting: "+1", melee: "+3", reaction: "+1", command: "+4", skill: "(C)[防戦指揮] 自身が搭乗するユニットがいるマスの友軍は防御時、HPダメージを-3。", img: 'https://www.gundam.jp/tv/world/character/images/ch_dozle.png' },
+            { name: "ガルマ・ザビ", side: "ジオン", shooting: "+2", melee: "+2", reaction: "+2", command: "+3", skill: "(C)[ジオンの御曹司] 1ゲームに1度、コスト1の増援を1機呼べる。", img: 'https://www.gundam.jp/tv/world/character/images/ch_garma.png' },
+            { name: "キシリア・ザビ", side: "ジオン", shooting: "+1", melee: "+1", reaction: "+2", command: "+5", skill: "(C)[諜報] 毎ターン、敵のスキルカードを1枚見て、それが使用されるまで内容を知ることができる。", img: 'https://www.gundam.jp/tv/world/character/images/ch_kycilia.png' },
+            { name: "ギレン・ザビ", side: "ジオン", shooting: "+0", melee: "+0", reaction: "+1", command: "+6", skill: "(C)[立てよ国民！] 1ゲームに1度、自軍の捨て山のMSを2機まで戦場に復帰させる。", img: 'https://www.gundam.jp/tv/world/character/images/ch_gihren.png' },
+            { name: "ララァ・スン", side: "ジオン", shooting: "+5", melee: "+1", reaction: "+6", command: "+2", skill: "(P)[ニュータイプ] 敵の攻撃を1d6で5以上なら無効化。オールレンジ攻撃の命中+2。", img: 'https://www.gundam.jp/tv/world/character/images/ch_lalah.png' },
+            { name: "ノリス・パッカード", side: "ジオン", shooting: "+3", melee: "+5", reaction: "+4", command: "+3", skill: "(P)[歴戦の勇士] HPが50%以下の時、格闘攻撃のダメージ+5、回避+1。", img: 'https://www.08ms-team.net/character/images/07.png' },
+            { name: "アイナ・サハリン", side: "ジオン", shooting: "+2", melee: "+2", reaction: "+3", command: "+2", skill: "(P)[想い] シロー・アマダと交戦時、お互いに攻撃できない。", img: 'https://www.08ms-team.net/character/images/02.png' },
+            { name: "バーナード・ワイズマン", side: "ジオン", shooting: "+2", melee: "+3", reaction: "+3", command: "+1", skill: "(P)[諦めない心] 自機が破壊される時、1d6を振り6が出ればHP1で持ちこたえる。", img: 'https://www.g-0080.net/character/images/03.png' },
+            { name: "サイクロプス隊", side: "ジオン", shooting: "+3", melee: "+3", reaction: "+3", command: "+2", skill: "(P)[チームワーク] シュタイナー、ガルシア、ミーシャの3人がいる場合、特殊作戦スキル使用可能。", img: 'https://www.g-0080.net/character/images/04.png' },
+            { name: "ジョニー・ライデン", side: "ジオン", shooting: "+4", melee: "+3", reaction: "+4", command: "+3", skill: "(P)[真紅の稲妻] 高機動型ザク/ゲルググ搭乗時、移動+1、回避+1。", img: 'https://i.imgur.com/bW3g3jH.png' },
+            { name: "シン・マツナガ", side: "ジオン", shooting: "+3", melee: "+4", reaction: "+3", command: "+3", skill: "(P)[ソロモンの白狼] ザク/ゲルググ搭乗時、格闘攻撃の命中+2。", img: 'https://i.imgur.com/S9s4j6p.png' },
+            { name: "ククルス・ドアン", side: "ジオン", shooting: "+1", melee: "+4", reaction: "+2", command: "+1", skill: "(P)[脱走兵] 戦闘を放棄できる。その場合、最も近いマップの端に移動する。", img: 'https://i.imgur.com/k9v9h8J.png' }
+        ],
+        skill: [
+            { name: "V作戦", side: "連邦", effect: "[戦略フェイズ] このカードを破棄する。自軍のMS1機のHPとENを完全に回復させる。" },
+            { name: "連邦の物量", side: "連邦", effect: "[戦略フェイズ] 自軍の捨て札置き場からコスト1のMSカードを1枚選び、自軍の戦艦の空きスロットに配置する。" },
+            { name: "ソーラ・システム", side: "連邦", effect: "[シナリオ限定] シナリオ「ソロモン攻略戦」でのみ使用可能。指定された手順で、要塞に大ダメージを与える。" },
+            { name: "最終射撃", side: "連邦", effect: "[戦闘フェイズ] ガンダムが使用可能。HPが1になる。敵1体に50ダメージを与える。この攻撃は回避できない。" },
+            { name: "Gパーツ換装", side: "連邦", effect: "[戦略フェイズ] ガンダムがGファイターに隣接している場合、Gアーマー、Gブル、Gスカイのいずれかに換装する（要別カード）。" },
+            { name: "ジムの盾", side: "連邦", effect: "[戦闘フェイズ] 味方が攻撃された時、隣接するジムがその攻撃を代わりに受けることができる。" },
+            { name: "08小隊、出撃！", side: "連邦", effect: "[戦略フェイズ] シロー、カレン、サンダースが同じ戦場にいる場合、このターンの3機の連携攻撃時、命中+2。" },
+            { name: "ソーラ・レイ", side: "ジオン", effect: "[シナリオ限定] シナリオ「ア・バオア・クー攻防戦」でのみ使用可能。指定された手順で、マップの特定エリアに壊滅的ダメージを与える。" },
+            { name: "ジーク・ジオン！", side: "ジオン", effect: "[戦闘フェイズ] このカードを破棄する。このターン、自軍の全ユニットの命中判定に+1。" },
+            { name: "ジェットストリームアタック", side: "ジオン", effect: "[戦闘フェイズ] ガイア、マッシュ、オルテガが搭乗するドム3機が同一対象に攻撃する時、命中判定+3し、敵は回避判定-3。" },
+            { name: "コロニー落とし", side: "ジオン", effect: "[シナリオ開始時] シナリオ「ジャブロー降下作戦」などで使用。マップの指定エリアに大ダメージ。" },
+            { name: "アプサラス計画", side: "ジオン", effect: "[戦略フェイズ] アイナとギニアスがいる場合、アプサラスの特殊能力を1ターン強化する。" },
+            { name: "サイクロプス隊の作戦", side: "ジオン", effect: "[戦略フェイズ] バーニィとサイクロプス隊がいる場合、敵施設への破壊工作を実行できる。" },
+            { name: "補給", side: "共通", effect: "[戦略フェイズ] 自軍戦艦に隣接する味方MS/MA1機のENを20回復する。" },
+            { name: "奇襲", side: "共通", effect: "[戦略フェイズ] 森林やデブリ帯にいる自軍ユニット1機を選択。次の戦闘フェイズでそのユニットが行う最初の攻撃は、反撃を受けない。" },
+            { name: "ミノフスキー粒子散布", side: "共通", effect: "[戦略フェイズ] 指定した3x3のエリアのミノフスキー粒子濃度を「高」にする。ENを10消費。" },
+            { name: "強制冷却", side: "共通", effect: "[戦略フェイズ] ユニット1機を選択。ENを20消費し、このターン使用した武装を次のターンも使用可能にする（通常はクールダウンが必要な武装）。" },
+            { name: "エースの勘", side: "共通", effect: "[戦闘フェイズ] 搭乗員の「反応」が4以上のパイロットが使用可能。敵の攻撃を1度だけ完全回避する。" },
+            { name: "陽動", side: "共通", effect: "[戦略フェイズ] ユニット1機を選択。次のターン、そのユニットは敵から優先的に狙われる（索敵されやすくなる）。" },
+            { name: "緊急脱出", side: "共通", effect: "[戦闘フェイズ] 攻撃を受けた時、使用可能。HPダメージを半分にし、2マス後退する。" },
+            { name: "データ収集", side: "共通", effect: "[戦闘フェイズ] 敵ユニットとの戦闘後、その敵ユニットの武装データを1つ知ることができる。" },
+            { name: "撤退勧告", side: "共通", effect: "[戦略フェイズ] 自軍の指揮官が敵ユニットに隣接している場合、1d6を振る。6が出た場合、その敵ユニットは戦場から離脱する（士官クラスには無効）。" }
+        ]
+    };
+    
+    async function callGemini(prompt) {
+        const apiKey = ""; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        
+        let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+        const payload = { contents: chatHistory };
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`APIリクエストに失敗しました: ${response.status} ${errorBody}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.candidates && result.candidates.length > 0 &&
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0) {
+                return result.candidates[0].content.parts[0].text;
+            } else {
+                return "AIからの有効な応答がありませんでした。";
+            }
+        } catch (error) {
+            console.error("Gemini API呼び出しエラー:", error);
+            return `エラーが発生しました: ${error.message}`;
+        }
+    }
+
+    async function generateScenario() {
+        const userInput = document.getElementById('scenario-prompt').value;
+        if (!userInput.trim()) {
+            document.getElementById('scenario-result').innerText = "シナリオの要望を入力してください。";
+            return;
+        }
+
+        document.getElementById('scenario-loader').classList.remove('hidden');
+        document.getElementById('scenario-result').classList.add('hidden');
+        
+        const prompt = `あなたは「機動戦士ガンダム」のボードゲームの優れたゲームマスターです。以下のユーザーの要望に基づいて、ユニークで面白いゲームシナリオを創作してください。
+シナリオには必ず以下の要素を含めてください：
+1. シナリオタイトル
+2. マップと戦場状況の説明
+3. 地球連邦軍の勝利条件
+4. 地球連邦軍の敗北条件
+5. ジオン公国軍の勝利条件
+6. ジオン公国軍の敗北条件
+
+出力は、各項目を見出しで明確に区切ったプレーンテキスト形式にしてください。
+
+ユーザーの要望：
+「${userInput}」`;
+
+        const result = await callGemini(prompt);
+        
+        document.getElementById('scenario-loader').classList.add('hidden');
+        document.getElementById('scenario-result').innerText = result;
+        document.getElementById('scenario-result').classList.remove('hidden');
+    }
+    
+    async function getTacticalAnalysis(cardJson) {
+        const card = JSON.parse(decodeURIComponent(cardJson));
+        const modal = document.getElementById('tactics-modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalLoader = document.getElementById('modal-loader');
+        
+        modal.classList.remove('hidden');
+        modalContent.classList.add('hidden');
+        modalLoader.classList.remove('hidden');
+        
+        const prompt = `あなたは「機動戦士ガンダム」世界の優れた戦術家です。以下のモビルスーツのデータに基づき、その戦術的な分析を簡潔に提供してください。
+分析には、ユニットの長所、短所、そして戦場での効果的な運用方法や推奨される戦術を含めてください。
+
+ユニット名： ${card.name}
+基本スペック： HP ${card.hp}, EN ${card.en}, 移動 ${card.move}, コスト ${card.cost}
+特殊能力と武装：
+${card.ability.replace(/<br>/g, '')}
+`;
+
+        const result = await callGemini(prompt);
+        modalContent.innerText = result;
+        modalLoader.classList.add('hidden');
+        modalContent.classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('tactics-modal').classList.add('hidden');
+    }
+
+    function showTab(tabName) {
+        const tabs = ['overview', 'scenarios', 'cards', 'gemini'];
+        tabs.forEach(tab => {
+            document.getElementById(`${tab}-content`).classList.add('hidden');
+            document.querySelector(`button[onclick="showTab('${tab}')"]`).classList.remove('active');
+        });
+        document.getElementById(`${tabName}-content`).classList.remove('hidden');
+        document.querySelector(`button[onclick="showTab('${tabName}')"]`).classList.add('active');
+    }
+
+    function filterCards(filter) {
+        document.querySelectorAll('#card-filters button').forEach(button => button.classList.remove('active'));
+        document.querySelector(`button[onclick="filterCards('${filter}')"]`).classList.add('active');
+        renderCards(filter);
+    }
+    
+    function createUnitCard(card, type) {
+        const color = type === 'federation' ? 'blue' : 'green';
+        const cardJson = encodeURIComponent(JSON.stringify(card));
+
+        return `
+            <div class="card bg-white rounded-lg shadow-md overflow-hidden flex flex-col" data-filter="${type}">
+                <div class="flex items-start p-4 flex-grow">
+                    <img src="${card.img}" alt="${card.name}" class="w-20 h-20 object-contain rounded-md bg-slate-200 p-1" onerror="this.onerror=null;this.src='${placeholderImg}';">
+                    <div class="flex-1 ml-4">
+                        <h3 class="text-lg font-bold card-title text-${color}-600">${card.name}</h3>
+                        <div class="mt-2 text-sm grid grid-cols-5 gap-x-1 text-center">
+                            <div class="bg-slate-100 p-1 rounded"><span class="font-bold block text-xs text-slate-500">HP</span><span class="data-value">${card.hp}</span></div>
+                            <div class="bg-slate-100 p-1 rounded"><span class="font-bold block text-xs text-slate-500">EN</span><span class="data-value">${card.en}</span></div>
+                            <div class="bg-slate-100 p-1 rounded"><span class="font-bold block text-xs text-slate-500">移動</span><span class="data-value">${card.move}</span></div>
+                            <div class="bg-slate-100 p-1 rounded"><span class="font-bold block text-xs text-slate-500">索敵</span><span class="data-value">${card.search}</span></div>
+                            <div class="bg-slate-100 p-1 rounded"><span class="font-bold block text-xs text-slate-500">コスト</span><span class="data-value">${card.cost}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-4 pb-2 flex-grow">
+                    <div class="mt-2 pt-2 border-t border-slate-200">
+                        <p class="text-xs leading-relaxed">${card.ability.replace(/\n/g, '<br>')}</p>
+                    </div>
+                </div>
+                <div class="p-2 bg-slate-50">
+                     <button class="gemini-button w-full text-xs font-bold py-2 px-3 rounded" onclick="getTacticalAnalysis('${cardJson}')">戦術分析 ✨</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function createPilotCard(card) {
+        const color = card.side === '連邦' ? 'blue' : 'green';
+        return `
+            <div class="card bg-white rounded-lg shadow-md overflow-hidden" data-filter="pilot">
+                 <div class="flex items-start p-4">
+                    <img src="${card.img}" alt="${card.name}" class="w-20 h-20 object-cover rounded-full border-2 border-slate-200" onerror="this.onerror=null;this.src='${placeholderImg}';">
+                    <div class="flex-1 ml-4">
+                        <h3 class="text-lg font-bold card-title text-${color}-600">${card.name} <span class="text-sm font-normal text-slate-500">(${card.side})</span></h3>
+                         <div class="mt-2 text-sm grid grid-cols-4 gap-1 text-center">
+                            <div class="bg-slate-100 p-1 rounded"><span class="font-bold block text-xs text-slate-500">射撃</span><span class="data-value">${card.shooting}</span></div>
+                            <div class="bg-slate-100 p-1 rounded"><span class="font-bold block text-xs text-slate-500">格闘</span><span class="data-value">${card.melee}</span></div>
+                            <div class="bg-slate-100 p-1 rounded"><span class="font-bold block text-xs text-slate-500">反応</span><span class="data-value">${card.reaction}</span></div>
+                            <div class="bg-slate-100 p-1 rounded"><span class="font-bold block text-xs text-slate-500">指揮</span><span class="data-value">${card.command}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-4 pb-4">
+                    <div class="mt-2 pt-2 border-t border-slate-200">
+                        <p class="text-xs leading-relaxed">${card.skill}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    function createSkillCard(card) {
+        let colorClass, sideText;
+        switch (card.side) {
+            case '連邦':
+                colorClass = 'border-blue-500 text-blue-800';
+                sideText = `(${card.side})`;
+                break;
+            case 'ジオン':
+                colorClass = 'border-green-500 text-green-800';
+                sideText = `(${card.side})`;
+                break;
+            default:
+                colorClass = 'border-purple-500 text-purple-800';
+                sideText = `(${card.side})`;
+        }
+        
+        return `
+            <div class="card bg-white p-4 rounded-lg shadow-md border-l-4 ${colorClass}" data-filter="skill">
+                <h3 class="text-lg font-bold card-title">${card.name} <span class="text-sm font-normal text-slate-500">${sideText}</span></h3>
+                <div class="mt-3 pt-3 border-t border-slate-200">
+                    <p class="text-sm leading-relaxed">${card.effect}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCards(filter = 'all') {
+        const grid = document.getElementById('card-grid');
+        grid.innerHTML = '';
+        
+        let cardsToRender = [];
+
+        if (filter === 'all' || filter === 'federation') {
+            cardData.federation.forEach(card => cardsToRender.push(createUnitCard(card, 'federation')));
+        }
+        if (filter === 'all' || filter === 'zeon') {
+            cardData.zeon.forEach(card => cardsToRender.push(createUnitCard(card, 'zeon')));
+        }
+        if (filter === 'all' || filter === 'pilot') {
+            cardData.pilot.forEach(card => cardsToRender.push(createPilotCard(card)));
+        }
+        if (filter === 'all' || filter === 'skill') {
+            cardData.skill.forEach(card => cardsToRender.push(createSkillCard(card)));
+        }
+
+        grid.innerHTML = cardsToRender.join('');
+    }
+
+    window.onload = () => {
+        renderCards();
+    };
+</script>
+
+</body>
+</html>
